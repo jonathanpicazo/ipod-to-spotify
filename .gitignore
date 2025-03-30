@@ -177,6 +177,7 @@ cython_debug/
 ipod_songs.json
 upload_results.json
 playlist_cache.json
+metadata_check_results.json
 
 # Mac
 .DS_Store

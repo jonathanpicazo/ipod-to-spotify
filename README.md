@@ -11,6 +11,7 @@ Transfer your iPod music library to Spotify playlists easily. This tool scans yo
 - 📊 Detailed upload reports and statistics
 - ⚡ Batch processing for faster uploads
 - 🔄 Resume capability with existing scans
+- 🔎 Metadata validation without uploading
 
 ## Prerequisites
 
@@ -58,16 +59,32 @@ Transfer your iPod music library to Spotify playlists easily. This tool scans yo
    poetry run start
    ```
 
-3. Follow the interactive prompts to:
+3. Choose from the available options:
 
-   - Scan your iPod for music
-   - Review found songs
-   - Create/update a Spotify playlist
+   - **Use existing song data**: Upload previously scanned songs to Spotify
+   - **Check metadata only**: Validate song metadata without uploading
+   - **Rescan iPod**: Perform a fresh scan of your iPod
+   - **Exit**: Close the application
 
-4. To clean up cache and temporary files:
-   ```bash
-   poetry run cleanup
-   ```
+### Metadata Checking
+
+The tool now includes a metadata validation feature that helps identify problematic files before uploading to Spotify. When using "Check metadata only":
+
+- Scans all songs for missing or invalid metadata
+- Identifies songs with unknown titles or artists
+- Shows the raw file title for comparison
+- Saves detailed results to `metadata_check_results.json`
+- Helps troubleshoot why certain songs might fail to upload
+
+### Files and Reports
+
+- `ipod_songs.json`: Cached song metadata from iPod
+- `upload_results.json`: Detailed upload results and statistics
+- `metadata_check_results.json`: Metadata validation results
+- `playlist_cache.json`: Spotify playlist information
+- `.cache`: Spotify authentication cache
+
+Use `poetry run cleanup` to remove all cache files and start fresh.
 
 ## How It Works
 
@@ -75,9 +92,10 @@ Transfer your iPod music library to Spotify playlists easily. This tool scans yo
 2. **Music Scanning**: Scans the iPod's music directory for audio files
 3. **Metadata Extraction**: Reads metadata from each audio file
 4. **Smart Parsing**: Handles various metadata formats and separators
-5. **Spotify Matching**: Searches Spotify for matching tracks
-6. **Playlist Creation**: Creates or updates a Spotify playlist with found tracks
-7. **Progress Tracking**: Maintains logs of successful uploads and any issues
+5. **Metadata Validation**: Checks for missing or invalid metadata
+6. **Spotify Matching**: Searches Spotify for matching tracks
+7. **Playlist Creation**: Creates or updates a Spotify playlist with found tracks
+8. **Progress Tracking**: Maintains logs of successful uploads and any issues
 
 ## Troubleshooting
 
@@ -94,17 +112,12 @@ Transfer your iPod music library to Spotify playlists easily. This tool scans yo
    - Check that redirect URI matches your Spotify app settings
 
 3. **Missing Metadata**:
-   - The tool will skip songs with unknown artists/titles
-   - Check the upload report for details on skipped songs
-
-### Files and Caches
-
-- `ipod_songs.json`: Cached song metadata from iPod
-- `upload_results.json`: Detailed upload results and statistics
-- `playlist_cache.json`: Spotify playlist information
-- `.cache`: Spotify authentication cache
-
-Use `poetry run cleanup` to remove all cache files and start fresh.
+   - Use the "Check metadata only" option to identify problematic files
+   - Check `metadata_check_results.json` for detailed information
+   - Common issues include:
+     - Missing artist information
+     - Unknown or malformed titles
+     - Incomplete metadata tags
 
 ## Future Updates
 

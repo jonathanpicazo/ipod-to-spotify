@@ -4,6 +4,7 @@ import sys
 def cleanup():
     # Files to clean up
     files_to_remove = [
+        'metadata_check_results.json', # Metadata check results
         'ipod_songs.json',        # Scanned songs metadata
         'upload_results.json',    # Upload results and statistics
         'playlist_cache.json',    # Spotify playlist cache
