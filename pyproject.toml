@@ -1,20 +1,21 @@
-[project]
+[tool.poetry]
 name = "ipod-to-spotify"
 version = "0.1.0"
-description = ""
-authors = [
-    {name = "Your Name",email = "you@example.com"}
-]
+description = "Transfer iPod music library to Spotify playlists"
+authors = ["Your Name <your.email@example.com>"]
 readme = "README.md"
-requires-python = ">=3.13"
-dependencies = ["mutagen (>=1.47.0,<2.0.0)"]
-
-[tool.poetry]
 packages = [{include = "ipod_to_spotify", from = "src"}]
+
+[tool.poetry.dependencies]
+python = "^3.8"
+mutagen = "^1.45.1"
+spotipy = "^2.23.0"
+python-dotenv = "^1.0.0"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
 
 [tool.poetry.scripts]
 start = "ipod_to_spotify.main:main"
-
-[build-system]
-requires = ["poetry-core>=2.0.0,<3.0.0"]
-build-backend = "poetry.core.masonry.api"
+cleanup = "ipod_to_spotify.cleanup:cleanup"
