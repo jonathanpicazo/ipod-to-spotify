@@ -1,7 +1,9 @@
 import os
+import json
+from mutagen import File
 
 def find_ipod_path():
-    # Try to find the iPod path on macOS
+    # Try to find the iPod path on macOS.
     volumes_path = "/Volumes"
     if not os.path.exists(volumes_path):
         return None
@@ -18,58 +20,85 @@ def find_ipod_path():
     
     return None
 
-def list_ipod_files(ipod_path):
-    # List the media files on the iPod.
+def extract_metadata(file_path):
+    # Extract metadata from an audio file.
+    try:
+        audio = File(file_path)
+        if audio is None:
+            return None
+        
+        # Initialize with default values
+        metadata = {
+            'file_path': file_path,
+            'title': 'Unknown Title',
+            'artist': 'Unknown Artist',
+            'album': 'Unknown Album'
+        }
+        
+        # Different file types store metadata differently
+        if hasattr(audio, 'tags') and audio.tags:
+            # MP3 files with ID3 tags
+            if audio.tags and hasattr(audio.tags, 'getall'):
+                # Extract common ID3 tags
+                for tag, field in [('TIT2', 'title'), ('TPE1', 'artist'), ('TALB', 'album')]:
+                    try:
+                        frames = audio.tags.getall(tag)
+                        if frames:
+                            metadata[field] = str(frames[0])
+                    except:
+                        pass
+            # MP4/AAC files
+            elif hasattr(audio, 'get'):
+                # Map of common MP4 tags to our fields
+                mp4_map = {
+                    '©nam': 'title',
+                    '©ART': 'artist',
+                    '©alb': 'album'
+                }
+                for mp4_tag, field in mp4_map.items():
+                    if mp4_tag in audio:
+                        metadata[field] = str(audio[mp4_tag][0])
+        
+        return metadata
+    except Exception as e:
+        print(f"Error processing {file_path}: {e}")
+        return None
+
+def scan_ipod_for_audio(ipod_path):
+    """Scan iPod for audio files and extract metadata."""
     if not ipod_path:
         print("iPod path not found")
-        return
+        return []
     
     music_path = os.path.join(ipod_path, "iPod_Control", "Music")
     if not os.path.exists(music_path):
         print(f"Music folder not found at {music_path}")
-        return
+        return []
     
-    print(f"Media folder found at: {music_path}")
+    print(f"Scanning for audio files in: {music_path}")
     
-    # File counters
-    total_files = 0
-    audio_files = 0
-    video_files = 0
-    other_files = 0
+    # Audio file extensions
+    audio_extensions = ('.mp3', '.m4a', '.aac', '.wav', '.aiff', '.alac', '.m4p')
     
-    # Common audio and video extensions
-    audio_extensions = ('.mp3', '.m4a', '.aac', '.wav', '.aiff', '.alac')
-    video_extensions = ('.mp4', '.m4v', '.mov')
+    songs = []
+    processed = 0
     
-    # List all subfolders (typically F00, F01, etc.)
-    for folder in os.listdir(music_path):
-        folder_path = os.path.join(music_path, folder)
-        if os.path.isdir(folder_path):
-            print(f"Subfolder: {folder}")
-            
-            # Process files in this subfolder
-            files = os.listdir(folder_path)
-            total_files += len(files)
-            
-            # Count file types
-            for file in files:
-                file_lower = file.lower()
-                if file_lower.endswith(audio_extensions):
-                    audio_files += 1
-                elif file_lower.endswith(video_extensions):
-                    video_files += 1
-                else:
-                    other_files += 1
-            
-            # Print a few example files
-            if files:
-                print(f"  Sample files: {', '.join(files[:5])}")
-                print(f"  Total files in {folder}: {len(files)}")
+    # Walk through all subfolders
+    for root, dirs, files in os.walk(music_path):
+        for file in files:
+            if file.lower().endswith(audio_extensions):
+                file_path = os.path.join(root, file)
+                
+                processed += 1
+                if processed % 100 == 0:
+                    print(f"Processed {processed} files...")
+                
+                metadata = extract_metadata(file_path)
+                if metadata:
+                    songs.append(metadata)
     
-    print(f"\nTotal files found: {total_files}")
-    print(f"Audio files found: {audio_files}")
-    print(f"Video files found: {video_files}")
-    print(f"Other files found: {other_files}")
+    print(f"Found {len(songs)} songs with metadata out of {processed} audio files")
+    return songs
 
 def main():
     print("Looking for iPod...")
@@ -78,7 +107,20 @@ def main():
     if not ipod_path:
         ipod_path = input("Enter your iPod path (e.g., /Volumes/YOUR_IPOD_NAME): ")
     
-    list_ipod_files(ipod_path)
+    songs = scan_ipod_for_audio(ipod_path)
+    
+    if songs:
+        # Save the metadata to a JSON file
+        with open('ipod_songs.json', 'w') as f:
+            json.dump(songs, f, indent=2)
+        print(f"Saved metadata for {len(songs)} songs to 'ipod_songs.json'")
+        
+        # Print a few examples
+        print("\nSample songs:")
+        for song in songs[:5]:
+            print(f"  - {song['title']} by {song['artist']} ({song['album']})")
+    else:
+        print("No songs found with readable metadata")
 
 if __name__ == "__main__":
     main()
