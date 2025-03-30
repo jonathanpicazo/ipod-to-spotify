@@ -105,7 +105,7 @@ def extract_metadata(file_path):
                             if tag in ['TIT2', 'TPE1', 'TALB']:
                                 metadata[id3_map[tag]] = str(frames[0])
                     except Exception as e:
-                        print(f"Error extracting {tag} from {file_path}: {e}")
+                        pass
                 
                 # Add file format details if available
                 try:
@@ -161,22 +161,37 @@ def scan_ipod_for_audio(ipod_path):
     # Audio file extensions
     audio_extensions = ('.mp3', '.m4a', '.aac', '.wav', '.aiff', '.alac', '.m4p')
     
+    # First pass: count total files to process
+    total_files = 0
+    for root, dirs, files in os.walk(music_path):
+        total_files += sum(1 for f in files if f.lower().endswith(audio_extensions))
+    
+    if total_files == 0:
+        print("No audio files found")
+        return []
+    
+    print(f"\nFound {total_files} audio files to process")
+    print("Progress: [", end="", flush=True)
+    
     songs = []
     processed = 0
     
-    # Walk through all subfolders
+    # Process files with progress bar
     for root, dirs, files in os.walk(music_path):
         for file in files:
             if file.lower().endswith(audio_extensions):
                 file_path = os.path.join(root, file)
                 
-                processed += 1
-                if processed % 100 == 0:
-                    print(f"Processed {processed} files...")
+                # Update progress bar roughly 50 times
+                if processed % (total_files // 50 + 1) == 0:
+                    print("=", end="", flush=True)
                 
                 metadata = extract_metadata(file_path)
                 if metadata:
                     songs.append(metadata)
+                
+                processed += 1
     
-    print(f"Found {len(songs)} songs with metadata out of {processed} audio files")
+    print("]\n")  # Close progress bar
+    print(f"Successfully extracted metadata from {len(songs)} out of {processed} audio files")
     return songs 

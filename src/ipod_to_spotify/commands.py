@@ -47,9 +47,35 @@ def handle_spotify_upload(songs: List[Dict]):
     while True:
         choice = input("\nEnter your choice (1 or 2): ").strip()
         if choice == "1":
-            playlist_name = input("\nEnter playlist name (press Enter for default 'iPod Library'): ").strip()
-            if not playlist_name:
-                playlist_name = None
+            # Check if default playlist name is set in env
+            default_name = env.get_default_playlist_name()
+            if default_name != 'iPod Library':  # Non-default value found in env
+                print("\nChoose playlist name option:")
+                print(f"1. Use name from .env file ({default_name})")
+                print("2. Enter custom name")
+                print("3. Use default name (iPod Library)")
+                
+                while True:
+                    name_choice = input("\nEnter your choice (1-3): ").strip()
+                    if name_choice == "1":
+                        playlist_name = default_name
+                        break
+                    elif name_choice == "2":
+                        playlist_name = input("\nEnter playlist name: ").strip()
+                        if not playlist_name:
+                            print("Using default name (iPod Library)")
+                            playlist_name = None
+                        break
+                    elif name_choice == "3":
+                        playlist_name = None  # Will use default iPod Library
+                        break
+                    else:
+                        print("Invalid choice. Please enter 1-3.")
+            else:
+                playlist_name = input("\nEnter playlist name (press Enter for default 'iPod Library'): ").strip()
+                if not playlist_name:
+                    playlist_name = None
+            
             try:
                 results = process_songs(songs_data=songs, playlist_name=playlist_name)
                 

@@ -184,6 +184,17 @@ class SpotifyUploader:
             if idx % (total_songs // 50 + 1) == 0:  # Update roughly 50 times
                 print("=", end="", flush=True)
             
+            # Create base song info with debug metadata
+            song_info = {
+                'file_path': song['file_path'],
+                'title': song['title'],
+                'artist': song['artist'],
+                'album': song['album'],
+                'raw_title': song.get('raw_title', song['title']),
+                'raw_metadata': song.get('raw_metadata', {}),
+                'format': song.get('format', 'unknown')
+            }
+            
             # Skip songs with Unknown metadata
             if song['title'] == 'Unknown Title' or song['artist'] == 'Unknown Artist':
                 invalid_reason = []
@@ -192,47 +203,23 @@ class SpotifyUploader:
                 if song['artist'] == 'Unknown Artist':
                     invalid_reason.append('Unknown Artist')
                 
-                results['invalid_metadata'].append({
-                    'file_path': song['file_path'],
-                    'title': song['title'],
-                    'artist': song['artist'],
-                    'album': song['album'],
-                    'raw_title': song.get('raw_title', 'Unknown Title'),
-                    'reason': f"Invalid metadata: {' '.join(invalid_reason)}"
-                })
+                song_info['reason'] = f"Invalid metadata: {' '.join(invalid_reason)}"
+                results['invalid_metadata'].append(song_info)
                 continue
             
             track_id = self.search_track(song['title'], song['artist'])
             
             if track_id:
                 if track_id in existing_tracks:
-                    results['skipped'].append({
-                        'file_path': song['file_path'],
-                        'title': song['title'],
-                        'artist': song['artist'],
-                        'album': song['album'],
-                        'raw_title': song.get('raw_title', song['title']),
-                        'reason': 'Already in playlist'
-                    })
+                    song_info['reason'] = 'Already in playlist'
+                    results['skipped'].append(song_info)
                 else:
                     track_ids.append(track_id)
-                    results['success'].append({
-                        'file_path': song['file_path'],
-                        'title': song['title'],
-                        'artist': song['artist'],
-                        'album': song['album'],
-                        'raw_title': song.get('raw_title', song['title']),
-                        'spotify_track_id': track_id
-                    })
+                    song_info['spotify_track_id'] = track_id
+                    results['success'].append(song_info)
             else:
-                results['failed'].append({
-                    'file_path': song['file_path'],
-                    'title': song['title'],
-                    'artist': song['artist'],
-                    'album': song['album'],
-                    'raw_title': song.get('raw_title', song['title']),
-                    'reason': 'No matching song found on Spotify'
-                })
+                song_info['reason'] = 'No matching song found on Spotify'
+                results['failed'].append(song_info)
             
             # Add tracks in batches of 100 (Spotify API limit)
             if len(track_ids) >= 100:
@@ -245,14 +232,9 @@ class SpotifyUploader:
                     # Move failed batch to failed results
                     last_batch = results['success'][-len(track_ids):]
                     results['success'] = results['success'][:-len(track_ids)]
-                    results['failed'].extend([{
-                        'file_path': item['file_path'],
-                        'title': item['title'],
-                        'artist': item['artist'],
-                        'album': item['album'],
-                        'raw_title': item.get('raw_title', item['title']),
-                        'reason': f'Batch upload failed: {str(e)}'
-                    } for item in last_batch])
+                    for item in last_batch:
+                        item['reason'] = f'Batch upload failed: {str(e)}'
+                        results['failed'].append(item)
                     track_ids = []
         
         # Add remaining tracks
@@ -265,14 +247,9 @@ class SpotifyUploader:
                 # Move failed batch to failed results
                 last_batch = results['success'][-len(track_ids):]
                 results['success'] = results['success'][:-len(track_ids)]
-                results['failed'].extend([{
-                    'file_path': item['file_path'],
-                    'title': item['title'],
-                    'artist': item['artist'],
-                    'album': item['album'],
-                    'raw_title': item.get('raw_title', item['title']),
-                    'reason': f'Batch upload failed: {str(e)}'
-                } for item in last_batch])
+                for item in last_batch:
+                    item['reason'] = f'Batch upload failed: {str(e)}'
+                    results['failed'].append(item)
         
         print("]\n")  # Close progress bar
         
