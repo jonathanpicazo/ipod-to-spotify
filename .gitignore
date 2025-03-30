@@ -1,5 +1,5 @@
 # Byte-compiled / optimized / DLL files
-src/ipod_to_spotify/__pycache__/
+**/__pycache__/
 *.py[cod]
 *$py.class
 
