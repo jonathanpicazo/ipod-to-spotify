@@ -1,5 +1,5 @@
 # Byte-compiled / optimized / DLL files
-**/__pycache__/
+**/__pycache__/ 
 *.py[cod]
 *$py.class
 
@@ -175,6 +175,8 @@ cython_debug/
 
 # Ignore json iPod files
 ipod_songs.json
+upload_results.json
+playlist_cache.json
 
 # Mac
 .DS_Store

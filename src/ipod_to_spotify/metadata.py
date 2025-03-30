@@ -1,21 +1,39 @@
 import os
 from mutagen import File
+from typing import Optional
 
-def parse_youtube_title(title):
-    # Parse a YouTube-style title into artist and song components.
-    # Common separators in YouTube titles
-    if ' - ' in title:
-        parts = title.split(' - ', 1)
-        artist = parts[0].strip()
-        song = parts[1].strip()
+def parse_title_metadata(title: str) -> tuple[Optional[str], str]:
+    # Parse a title into artist and song components
+    # Returns (artist, title) tuple. Artist may be None if parsing fails
+    if not title or title == 'Unknown Title':
+        return None, title
         
-        # Handle features in parentheses
-        if '(' in song:
-            song_parts = song.split('(', 1)
-            song = song_parts[0].strip()
-            # Could extract feature info here if needed
-        
-        return artist, song
+    title = title.strip()
+    
+    # Common separators in titles
+    separators = [
+        ' - ',   # Standard hyphen
+        ' – ',   # En dash
+        ' — ',   # Em dash
+        ' -- ',  # Double hyphen
+    ]
+    
+    for separator in separators:
+        if separator in title:
+            parts = title.split(separator, 1)  # Split on first occurrence only
+            if len(parts) == 2:
+                artist, song = parts
+                artist = artist.strip()
+                song = song.strip()
+                
+                # Only use the parsed result if both parts are meaningful
+                if artist and song and artist != 'Unknown Artist':
+                    # Handle features in parentheses
+                    if '(' in song:
+                        song = song.split('(', 1)[0].strip()
+                    
+                    return artist, song
+    
     return None, title
 
 def extract_metadata(file_path):
@@ -57,9 +75,9 @@ def extract_metadata(file_path):
                     if mp4_tag in audio:
                         metadata[field] = str(audio[mp4_tag][0])
         
-        # If artist is unknown but we have a title, try to parse YouTube-style title
+        # If artist is unknown but we have a title, try to parse title
         if metadata['artist'] == 'Unknown Artist' and metadata['title'] != 'Unknown Title':
-            parsed_artist, parsed_title = parse_youtube_title(metadata['title'])
+            parsed_artist, parsed_title = parse_title_metadata(metadata['title'])
             if parsed_artist:
                 metadata['artist'] = parsed_artist
                 metadata['title'] = parsed_title
