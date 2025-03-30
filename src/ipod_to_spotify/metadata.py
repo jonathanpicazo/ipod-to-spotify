@@ -75,6 +75,9 @@ def extract_metadata(file_path):
                     if mp4_tag in audio:
                         metadata[field] = str(audio[mp4_tag][0])
         
+        # Store raw title before any parsing
+        metadata['raw_title'] = metadata['title']
+        
         # If artist is unknown but we have a title, try to parse title
         if metadata['artist'] == 'Unknown Artist' and metadata['title'] != 'Unknown Title':
             parsed_artist, parsed_title = parse_title_metadata(metadata['title'])

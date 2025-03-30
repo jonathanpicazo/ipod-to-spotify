@@ -1,6 +1,5 @@
 import os
 import json
-from typing import Dict, List, Optional
 import spotipy
 from spotipy.oauth2 import SpotifyOAuth
 from . import env
@@ -133,7 +132,6 @@ class SpotifyUploader:
         results = self.sp.search(q=query, type='track', limit=5)
         
         if results['tracks']['items']:
-            # You could implement more sophisticated matching here
             return results['tracks']['items'][0]['id']
         
         return None
@@ -187,10 +185,19 @@ class SpotifyUploader:
             
             # Skip songs with Unknown metadata
             if song['title'] == 'Unknown Title' or song['artist'] == 'Unknown Artist':
+                invalid_reason = []
+                if song['title'] == 'Unknown Title':
+                    invalid_reason.append('Unknown Title')
+                if song['artist'] == 'Unknown Artist':
+                    invalid_reason.append('Unknown Artist')
+                
                 results['invalid_metadata'].append({
-                    'original_song': song,
-                    'reason': f"Invalid metadata: {'Unknown Title' if song['title'] == 'Unknown Title' else ''}"
-                             f"{'Unknown Artist' if song['artist'] == 'Unknown Artist' else ''}"
+                    'file_path': song['file_path'],
+                    'title': song['title'],
+                    'artist': song['artist'],
+                    'album': song['album'],
+                    'raw_title': song.get('raw_title', 'Unknown Title'),
+                    'reason': f"Invalid metadata: {' '.join(invalid_reason)}"
                 })
                 continue
             
@@ -199,18 +206,30 @@ class SpotifyUploader:
             if track_id:
                 if track_id in existing_tracks:
                     results['skipped'].append({
-                        'original_song': song,
+                        'file_path': song['file_path'],
+                        'title': song['title'],
+                        'artist': song['artist'],
+                        'album': song['album'],
+                        'raw_title': song.get('raw_title', song['title']),
                         'reason': 'Already in playlist'
                     })
                 else:
                     track_ids.append(track_id)
                     results['success'].append({
-                        'original_song': song,
+                        'file_path': song['file_path'],
+                        'title': song['title'],
+                        'artist': song['artist'],
+                        'album': song['album'],
+                        'raw_title': song.get('raw_title', song['title']),
                         'spotify_track_id': track_id
                     })
             else:
                 results['failed'].append({
-                    'original_song': song,
+                    'file_path': song['file_path'],
+                    'title': song['title'],
+                    'artist': song['artist'],
+                    'album': song['album'],
+                    'raw_title': song.get('raw_title', song['title']),
                     'reason': 'No matching song found on Spotify'
                 })
             
@@ -226,7 +245,11 @@ class SpotifyUploader:
                     last_batch = results['success'][-len(track_ids):]
                     results['success'] = results['success'][:-len(track_ids)]
                     results['failed'].extend([{
-                        'original_song': item['original_song'],
+                        'file_path': item['file_path'],
+                        'title': item['title'],
+                        'artist': item['artist'],
+                        'album': item['album'],
+                        'raw_title': item.get('raw_title', item['title']),
                         'reason': f'Batch upload failed: {str(e)}'
                     } for item in last_batch])
                     track_ids = []
@@ -242,7 +265,11 @@ class SpotifyUploader:
                 last_batch = results['success'][-len(track_ids):]
                 results['success'] = results['success'][:-len(track_ids)]
                 results['failed'].extend([{
-                    'original_song': item['original_song'],
+                    'file_path': item['file_path'],
+                    'title': item['title'],
+                    'artist': item['artist'],
+                    'album': item['album'],
+                    'raw_title': item.get('raw_title', item['title']),
                     'reason': f'Batch upload failed: {str(e)}'
                 } for item in last_batch])
         
