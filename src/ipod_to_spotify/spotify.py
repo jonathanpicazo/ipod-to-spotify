@@ -1,6 +1,7 @@
 import os
 import json
 import spotipy
+from typing import Optional, List, Dict, Set
 from spotipy.oauth2 import SpotifyOAuth
 from . import env
 
@@ -136,7 +137,7 @@ class SpotifyUploader:
         
         return None
 
-    def get_existing_tracks(self, playlist_id: str) -> set:
+    def get_existing_tracks(self, playlist_id: str) -> Set:
         # Get all tracks currently in the playlist
         existing_tracks = set()
         results = self.sp.playlist_tracks(playlist_id)
