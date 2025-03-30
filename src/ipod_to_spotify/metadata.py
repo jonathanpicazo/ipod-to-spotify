@@ -48,23 +48,77 @@ def extract_metadata(file_path):
             'file_path': file_path,
             'title': 'Unknown Title',
             'artist': 'Unknown Artist',
-            'album': 'Unknown Album'
+            'album': 'Unknown Album',
+            'raw_metadata': {},  # Store all raw ID3 tags here
+            'format': None
         }
         
         # Different file types store metadata differently
         if hasattr(audio, 'tags') and audio.tags:
             # MP3 files with ID3 tags
             if audio.tags and hasattr(audio.tags, 'getall'):
-                # Extract common ID3 tags
-                for tag, field in [('TIT2', 'title'), ('TPE1', 'artist'), ('TALB', 'album')]:
+                metadata['format'] = 'mp3'
+                
+                # ID3 tag mapping - comprehensive list of common ID3v2 tags
+                id3_map = {
+                    'TIT2': 'title',           # Title
+                    'TPE1': 'artist',          # Artist
+                    'TALB': 'album',           # Album
+                    'TDRC': 'year',            # Year
+                    'TYER': 'year_legacy',     # Year (ID3v2.3)
+                    'TRCK': 'track_number',    # Track number
+                    'TPOS': 'disc_number',     # Disc number
+                    'TCON': 'genre',           # Genre
+                    'COMM': 'comments',        # Comments
+                    'TPE2': 'album_artist',    # Album artist
+                    'TCOM': 'composer',        # Composer
+                    'TPUB': 'publisher',       # Publisher
+                    'TBPM': 'bpm',             # BPM
+                    'TLEN': 'length',          # Length
+                    'TKEY': 'initial_key',     # Initial key
+                    'TXXX': 'user_defined',    # User defined text
+                    'TCOP': 'copyright',       # Copyright
+                    'TENC': 'encoded_by',      # Encoded by
+                    'TSSE': 'encoder_settings' # Encoder settings
+                }
+                
+                # Extract all available ID3 tags
+                for tag in id3_map.keys():
                     try:
                         frames = audio.tags.getall(tag)
                         if frames:
-                            metadata[field] = str(frames[0])
-                    except:
+                            # Store in raw_metadata
+                            if tag == 'TXXX':  # Handle user-defined text frames specially
+                                metadata['raw_metadata'][tag] = [
+                                    {'desc': frame.desc, 'text': frame.text} 
+                                    for frame in frames
+                                ]
+                            elif tag == 'COMM':  # Handle comment frames specially
+                                metadata['raw_metadata'][tag] = [
+                                    {'lang': frame.lang, 'desc': frame.desc, 'text': frame.text} 
+                                    for frame in frames
+                                ]
+                            else:
+                                metadata['raw_metadata'][tag] = [str(frame) for frame in frames]
+                            
+                            # For main fields, also store in top level
+                            if tag in ['TIT2', 'TPE1', 'TALB']:
+                                metadata[id3_map[tag]] = str(frames[0])
+                    except Exception as e:
                         pass
-            # MP4/AAC files
+                
+                # Add file format details if available
+                try:
+                    metadata['raw_metadata']['bitrate'] = audio.info.bitrate
+                    metadata['raw_metadata']['sample_rate'] = audio.info.sample_rate
+                    metadata['raw_metadata']['length_seconds'] = int(audio.info.length)
+                    metadata['raw_metadata']['mode'] = audio.info.mode
+                except:
+                    pass
+                
+            # Basic support for other formats (MP4/AAC)
             elif hasattr(audio, 'get'):
+                metadata['format'] = 'mp4'
                 # Map of common MP4 tags to our fields
                 mp4_map = {
                     '©nam': 'title',
@@ -84,6 +138,7 @@ def extract_metadata(file_path):
             if parsed_artist:
                 metadata['artist'] = parsed_artist
                 metadata['title'] = parsed_title
+                metadata['raw_metadata']['parsed_from_title'] = True
         
         return metadata
     except Exception as e:
@@ -106,22 +161,37 @@ def scan_ipod_for_audio(ipod_path):
     # Audio file extensions
     audio_extensions = ('.mp3', '.m4a', '.aac', '.wav', '.aiff', '.alac', '.m4p')
     
+    # First pass: count total files to process
+    total_files = 0
+    for root, dirs, files in os.walk(music_path):
+        total_files += sum(1 for f in files if f.lower().endswith(audio_extensions))
+    
+    if total_files == 0:
+        print("No audio files found")
+        return []
+    
+    print(f"\nFound {total_files} audio files to process")
+    print("Progress: [", end="", flush=True)
+    
     songs = []
     processed = 0
     
-    # Walk through all subfolders
+    # Process files with progress bar
     for root, dirs, files in os.walk(music_path):
         for file in files:
             if file.lower().endswith(audio_extensions):
                 file_path = os.path.join(root, file)
                 
-                processed += 1
-                if processed % 100 == 0:
-                    print(f"Processed {processed} files...")
+                # Update progress bar roughly 50 times
+                if processed % (total_files // 50 + 1) == 0:
+                    print("=", end="", flush=True)
                 
                 metadata = extract_metadata(file_path)
                 if metadata:
                     songs.append(metadata)
+                
+                processed += 1
     
-    print(f"Found {len(songs)} songs with metadata out of {processed} audio files")
+    print("]\n")  # Close progress bar
+    print(f"Successfully extracted metadata from {len(songs)} out of {processed} audio files")
     return songs 
